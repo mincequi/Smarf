@@ -1,14 +1,22 @@
 TEMPLATE = app
 
-QT += qml quick mqtt quickcontrols2
+QT += charts qml quick mqtt quickcontrols2 svg widgets
 CONFIG += c++11
 
 SOURCES += main.cpp \
-    Inverter.cpp \
+    HistoricalDataModel.cpp \
+    InverterModel.cpp \
+    Persistence.cpp \
+    ThemeModel.cpp \
+    Types.cpp \
     qmlmqttclient.cpp
 
 HEADERS += \
-    Inverter.h \
+    HistoricalDataModel.h \
+    InverterModel.h \
+    Persistence.h \
+    ThemeModel.h \
+    Types.h \
     qmlmqttclient.h
 
 RESOURCES += qml.qrc

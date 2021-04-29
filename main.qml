@@ -1,11 +1,11 @@
 import QtQuick 2.15
 import QtQuick.Window 2.2
-import QtQuick.Controls 2.1
-//import QtQuick.Controls 2.12
+import QtQuick.Controls 2.12
 import QtQuick.Controls.Material 2.12
 import QtQuick.Layouts 1.1
 import QtQuick.Shapes 1.15
 import MqttClient 1.0
+import Smarf.ThemeModel 1.0
 
 ApplicationWindow {
     visible: true
@@ -17,119 +17,105 @@ ApplicationWindow {
     id: root
 
     Material.theme: Material.Dark
+    Material.accent: "#BB86FC"
+    Material.background: "#121212"
 
     property var inverterModel: 0
     property var portNumber: 1883   // workaround to assign port to MqttClient
 
+    property int appState: Qt.application.state
+
+    Component.onCompleted: {
+        ThemeModel.primaryColor = Material.color(Material.Blue, Material.Shade500)
+        ThemeModel.secondaryColor = Material.color(Material.Teal, Material.Shade500)
+    }
+
+    /*
+    onAppStateChanged: {
+        console.log("onAppStateChanged: " + appState)
+        switch (appState) {
+        case Qt.ApplicationActive:
+        case Qt.ApplicationInactive:
+            client.start();
+            break;
+        case Qt.ApplicationHidden:
+        case Qt.ApplicationSuspended:
+            client.stop();
+            break;
+        default:
+            break;
+        }
+    }
+    */
+
     MqttClient {
         id: client
-        hostname: hostnameField.text
         port: portNumber
     }
 
-    GridLayout {
-        id: gridLayout
+    footer: TabBar {
+        id: bar
+        width: parent.width // anchors.fill: parent
+        height: 56
+        position: TabBar.Footer
+        TabButton {
+            height: 56
+            anchors.top: parent.top
+            text: qsTr("Live")
+            icon.source: "qrc:/icons/speedometer.svg"
+            display: AbstractButton.TextUnderIcon
+            font.pointSize: 12
+            font.capitalization: Font.MixedCase
+            font.weight: Font.Normal
+        }
+        TabButton {
+            height: 56
+            anchors.top: parent.top
+            text: qsTr("History")
+            icon.source: "qrc:/icons/chart-line.svg"
+            display: AbstractButton.TextUnderIcon
+            font.pointSize: 12
+            font.capitalization: Font.MixedCase
+            font.weight: Font.Normal
+        }
+        TabButton {
+            height: 56
+            anchors.bottom: parent.bottom
+            text: qsTr("Settings")
+            icon.source: "qrc:/icons/cog-outline.svg"
+            icon.height: 24
+            display: AbstractButton.TextUnderIcon
+            font.pointSize: 12
+            font.capitalization: Font.MixedCase
+            font.weight: Font.Normal
+        }
+    }
+
+    ColumnLayout {
+        x: (parent.width-344)/2
+        y: 16
+        z: 0
         Layout.fillWidth: true
-        anchors.margins: 10
-        columns: 2
-
-        Label {
-            text: "Hostname:"
-            enabled: client.state === MqttClient.Disconnected
-        }
-
-        TextField {
-            id: hostnameField
-            Layout.fillWidth: true
-            text: "broker.hivemq.com"
-            placeholderText: "<Your plant's MQTT broker>"
-            enabled: client.state === MqttClient.Disconnected
-        }
-
-        Label {
-            text: "Plant name:"
-            enabled: client.state === MqttClient.Disconnected
-        }
-
-        TextField {
-            id: plantnameField
-            Layout.fillWidth: true
-            text: "RohrbachII"
-            placeholderText: "<Your plant's name>"
-            enabled: client.state === MqttClient.Disconnected
-        }
-
-        Button {
-            id: connectButton
-            Layout.fillWidth: true
-            text: client.state === MqttClient.Connected ? "Disconnect" : "Connect"
-            onClicked: {
-                if (client.state === MqttClient.Connected) {
-                    client.disconnectFromHost()
-                } else
-                    client.connectToPlant(plantnameField.text)
-            }
-        }
-
-        Button {
-            id: toggleButton
-            Layout.fillWidth: true
-            text: "Toggle"
-            onClicked: {
-                client.toggleMppCount()
-            }
-        }
-    } // GridLayout
-
-    Flow {
-        Layout.columnSpan: 2
-        anchors.top: gridLayout.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: lastUpdateLabel.top
-
-        Label {
-            text: "DFSFDF"
-        }
+        Layout.fillHeight: true
+        spacing: 16
 
         Repeater {
             model: client.inverters
 
-            Gauge {
-                barCount: 2
+            InverterCard {
+                //anchors.horizontalCenter: parent.horizontalCenter
                 inverter: modelData
             }
         } // Repeater
-    }
 
-    Label {
-        id: lastUpdateLabel
-        anchors.bottom: statusLine.top
-        Layout.columnSpan: 2
-        Layout.fillWidth: true
-        //color: "#333333"
-        text: inverterModel.lastUpdate
-    }
-
-    Label {
-        id: statusLine
-        function stateToString(value) {
-            if (value === 0)
-                return "Disconnected"
-            else if (value === 1)
-                return "Connecting"
-            else if (value === 2)
-                return "Connected"
-            else
-                return "Unknown"
+        DataCard {
         }
+    }
 
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        Layout.columnSpan: 2
-        Layout.fillWidth: true
-        //color: "#333333"
-        text: "Status:" + stateToString(client.state) + "(" + client.state + ")"
-        enabled: client.state === MqttClient.Connected
+    AddPlant {
+        id: addPlant
+        client: client
+        z: 100
+        anchors.fill: parent
     }
 }

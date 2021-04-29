@@ -9,15 +9,16 @@ Item {
     id: gauge
 
     property var inverter: 0
-    property var radius: 80
-    property var strokeWidth: 12
-    property var margin: 4
-    property var barCount: 2
+    property var radius: 64
+    property var strokeWidth: 8
+    property var pointerSize: 10
+    property var barMargin: 2
+    property var barCount: inverter.stringLiveData.length
 
     //Layout.fillWidth: true
     //Layout.fillHeight: true
-    implicitWidth: radius*2 + strokeWidth
-    implicitHeight: radius*2 + strokeWidth
+    implicitWidth: radius*2 + Math.max(gauge.strokeWidth, 2*gauge.pointerSize)
+    implicitHeight: radius*2 + Math.max(gauge.strokeWidth, 2*gauge.pointerSize)
     //anchors.centerIn: parent
     //anchors.bottom: parent.bottom
     //anchors.right: parent.right
@@ -25,6 +26,7 @@ Item {
     layer.enabled: true
     layer.samples: 4
 
+    // Gauge 1
     Shape {
         id: gauge1
         ShapePath {
@@ -34,8 +36,8 @@ Item {
             capStyle: ShapePath.FlatCap
 
             PathAngleArc {
-                centerX: width/2
-                centerY: height/2
+                centerX: width/2 //radius + strokeWidth/2
+                centerY: width/2 //radius + strokeWidth/2
                 radiusX: radius
                 radiusY: radius
                 startAngle: 90
@@ -51,30 +53,41 @@ Item {
             Material.elevation: 4
 
             PathAngleArc {
-                centerX: width/2
-                centerY: height/2
+                centerX: width/2 //radius + strokeWidth/2
+                centerY: width/2 //radius + strokeWidth/2
                 radiusX: radius
                 radiusY: radius
                 startAngle: 90
-                sweepAngle: inverter.powerDc[0]
+                sweepAngle: inverter.stringLiveData[0].power/inverter.stringLiveData[0].powerPeak*270.0
 
                 Behavior on sweepAngle { SmoothedAnimation { duration: 4000; velocity: -1; easing.type: "OutQuad" } }
             }
         }
 
+        GaugePointer {
+            x: gauge.width/2 // gauge.radius + strokeWidth/2
+            y: gauge.width/2 //gauge.radius + strokeWidth/2
+            size: pointerSize
+            radius: gauge.radius
+            color: Material.color(Material.Blue, Material.Shade500)
+            rotation: inverter.stringLiveData[0].powerPeakToday/inverter.stringLiveData[0].powerPeak*270.0
+        }
+
         Text {
-            x: radius + strokeWidth
-            y: 2*radius //+ implicitHeight/2
-            text: "MPP A"
-            //font.bold: true
-            font.pixelSize: 12
+            x: gauge.radius + strokeWidth + gauge.pointerSize/2
+            y: 2*gauge.radius + gauge.pointerSize/2 - 1
+            text: inverter.stringLiveData[0].name
+            //anchors.bottom: gauge.bottom
+            //anchors.baseline: parent.bottom
+            font.pixelSize: 10
             color: Material.color(Material.Blue, Material.Shade500)
         }
     }
 
+    // Gauge 2
     Shape {
         id: gauge2
-        visible: barCount > 1
+        visible: barCount  > 1
         ShapePath {
             fillColor: "transparent"
             strokeColor: Material.color(Material.Grey, Material.Shade900)
@@ -84,8 +97,8 @@ Item {
             PathAngleArc {
                 centerX: width/2
                 centerY: height/2
-                radiusX: gauge.radius - gauge.strokeWidth - gauge.margin
-                radiusY: gauge.radius - gauge.strokeWidth - gauge.margin
+                radiusX: gauge.radius - gauge.strokeWidth - gauge.barMargin
+                radiusY: gauge.radius - gauge.strokeWidth - gauge.barMargin
                 startAngle: 90
                 sweepAngle: 270
             }
@@ -101,60 +114,70 @@ Item {
             PathAngleArc {
                 centerX: width/2
                 centerY: height/2
-                radiusX: gauge.radius - gauge.strokeWidth - gauge.margin
-                radiusY: gauge.radius - gauge.strokeWidth - gauge.margin
+                radiusX: gauge.radius - gauge.strokeWidth - gauge.barMargin
+                radiusY: gauge.radius - gauge.strokeWidth - gauge.barMargin
                 startAngle: 90
-                sweepAngle: inverter.powerDc[1]
+                sweepAngle: inverter.stringLiveData[1].power/inverter.stringLiveData[1].powerPeak*270.0
 
                 Behavior on sweepAngle { SmoothedAnimation { duration: 4000; velocity: -1; easing.type: "OutQuad" } }
             }
         }
 
+        GaugePointer {
+            x: gauge.width/2 // gauge.radius + strokeWidth/2
+            y: gauge.width/2 //gauge.radius + strokeWidth/2
+            size: -pointerSize
+            radius: gauge.radius - gauge.strokeWidth - gauge.barMargin
+            color: Material.color(Material.Teal, Material.Shade500)
+            rotation: inverter.stringLiveData[1].powerPeakToday/inverter.stringLiveData[1].powerPeak*270.0
+        }
+
         Text {
-            x: radius + strokeWidth
-            y: 2*radius - strokeWidth - margin
-            text: "MPP B"
-            //font.bold: true
-            font.pixelSize: 12
+            x: gauge.radius + strokeWidth + gauge.pointerSize/2
+            y: 2*gauge.radius - strokeWidth - gauge.barMargin - 1 + gauge.pointerSize/2
+            text: inverter.stringLiveData[1].name
+            font.pixelSize: 10
             color: Material.color(Material.Teal, Material.Shade500)
         }
     } // Shape
 
+    // Text
     GridLayout {
         anchors.right: parent.right
+        anchors.rightMargin: gauge.pointerSize/2
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: (radius + strokeWidth/2 - barCount * strokeWidth - (barCount-1)*margin)/2
+        anchors.verticalCenterOffset: (gauge.radius + strokeWidth/2 - barCount * strokeWidth - (barCount-1)*barMargin)/2
         columns: 2
-        rowSpacing: -8.0
+        rowSpacing: -6.0
         Text {
             Layout.alignment: Qt.AlignRight
             color: Material.color(Material.Blue, Material.Shade500)
-            text: "5135"
+            text: inverter.stringLiveData[0].power < 10000 ? inverter.stringLiveData[0].power.toFixed(0) : (inverter.stringLiveData[0].power/1000.0).toFixed(1)
             font.bold: true
-            font.pointSize: 24
+            font.pointSize: 20
         }
         Text {
             Layout.alignment: Qt.AlignRight
             color: Material.color(Material.Blue, Material.Shade500)
-            text: "W"
-            font.pointSize: 20
+            text: inverter.stringLiveData[0].power < 10000 ? "W" : "kW"
+            font.pointSize: 16
         }
         Text {
             id: readout2
             visible: barCount > 1
             Layout.alignment: Qt.AlignRight
             color: Material.color(Material.Teal, Material.Shade500)
-            text: "5.23"
+            text: inverter.stringLiveData[1].power < 10000 ? inverter.stringLiveData[1].power.toFixed(0) : (inverter.stringLiveData[1].power/1000.0).toFixed(1)
             font.bold: true
-            font.pointSize: 24
+            font.pointSize: 20
         }
         Text {
             id: unit2
             visible: barCount > 1
             Layout.alignment: Qt.AlignRight
             color: Material.color(Material.Teal, Material.Shade500)
-            text: "kW"
-            font.pointSize: 20
+            text: inverter.stringLiveData[1].power < 10000 ? "W" : "kW"
+            font.pointSize: 16
         }
     }
 
