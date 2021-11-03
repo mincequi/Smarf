@@ -1,6 +1,6 @@
 TEMPLATE = app
 
-QT += charts qml quick mqtt quickcontrols2 svg widgets
+QT += charts qml quick quickcontrols2 svg widgets
 CONFIG += c++11
 
 SOURCES += main.cpp \
@@ -21,6 +21,7 @@ HEADERS += \
 
 RESOURCES += qml.qrc
 
+include(thirdparty/qmqtt/qmqtt.pri)
 include(thirdparty/qmsgpack/qmsgpack.pri)
 
 # Additional import path used to resolve QML modules in Qt Creator's code model

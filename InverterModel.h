@@ -3,14 +3,17 @@
 #include "Types.h"
 
 #include <QDateTime>
-#include <QMqttClient>
 #include <QTimer>
+
+#include <qmqtt_client.h>
 
 struct StringConfig;
 class StringData;
-class QmlMqttClient;
-class QMqttMessage;
-class QMqttSubscription;
+
+namespace QMQTT {
+class Client;
+class Message;
+}
 
 class InverterModel : public QObject {
     Q_OBJECT
@@ -44,19 +47,17 @@ Q_SIGNALS:
 private:
     void onConnected();
     void onDisconnected();
-    void onStateChanged(QMqttClient::ClientState state);
-    void onErrorChanged(QMqttClient::ClientError error);
-
-    void onLiveDataReceived(const QMqttMessage& qmsg);
-    void onStatsDataReceived(const QMqttMessage& qmsg);
+    // onStateChanged(QMqttClient::ClientState state);
+    void onErrorChanged(const QMQTT::ClientError error);
+    void onMessageReceived(const QMQTT::Message& message);
 
     QString lastUpdate();
 
     InverterConfig m_config;
-    QMqttClient* m_client;
+    QMQTT::Client* m_client;
 
-    QMqttSubscription* m_liveSub = nullptr;
-    QMqttSubscription* m_statsSub = nullptr;
+    QString m_liveTopic;
+    QString m_statsTopic;
 
     QTimer  m_updateTimer;
 

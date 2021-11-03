@@ -4,9 +4,13 @@
 #include "Types.h"
 
 #include <QtCore/QMap>
-#include <QtMqtt/QMqttClient>
 
-class QmlMqttClient : public QMqttClient
+namespace QMQTT {
+class Client;
+class Message;
+}
+
+class QmlMqttClient : public QObject
 {
 public:
     enum State {
@@ -49,10 +53,12 @@ Q_SIGNALS:
     void invertersChanged();
 
 private:
-    void onStateChanged(QMqttClient::ClientState state);
+    //void onStateChanged(QMqttClient::ClientState state);
     void onConnected();
     void onDisconnected();
+    void onReceived(const QMQTT::Message& message);
 
+    QMQTT::Client* m_client = nullptr;
     InverterConfig m_inverterConfig;
     Persistence m_config;
 

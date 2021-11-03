@@ -3,38 +3,32 @@
 #include "Types.h"
 
 #include <QDateTime>
-#include <QMqttClient>
-#include <QMqttMessage>
-#include <QMqttSubscription>
 
 #include <msgpack.h>
+#include <qmqtt.h>
 
 InverterModel::InverterModel(const InverterConfig& config)
     : m_config(config),
-      m_client(new QMqttClient(this))
-{
-    connect(m_client, &QMqttClient::connected, this, &InverterModel::onConnected);
-    connect(m_client, &QMqttClient::disconnected, this, &InverterModel::onDisconnected);
-    connect(m_client, &QMqttClient::stateChanged, this, &InverterModel::onStateChanged);
-    connect(m_client, &QMqttClient::errorChanged, this, &InverterModel::onErrorChanged);
-    m_client->setHostname(m_config.mqttHost);
+      m_client(new QMQTT::Client()) {
+    connect(m_client, &QMQTT::Client::connected, this, &InverterModel::onConnected);
+    connect(m_client, &QMQTT::Client::disconnected, this, &InverterModel::onDisconnected);
+    connect(m_client, &QMQTT::Client::error, this, &InverterModel::onErrorChanged);
+    m_client->setHostName(m_config.mqttHost);
     m_client->setPort(m_config.mqttPort);
 
     connectToHost();
 }
 
-InverterModel::~InverterModel()
-{
+InverterModel::~InverterModel() {
     disconnectFromHost();
+    m_client->deleteLater();
 }
 
-QString InverterModel::name() const
-{
+QString InverterModel::name() const {
     return m_config.name;
 }
 
-QList<QObject*> InverterModel::stringLiveData()
-{
+QList<QObject*> InverterModel::stringLiveData() {
     QList<QObject*> objects;
     for (auto& data : m_stringLiveData) {
         objects.push_back(data);
@@ -42,8 +36,7 @@ QList<QObject*> InverterModel::stringLiveData()
     return objects;
 }
 
-void InverterModel::connectToHost()
-{
+void InverterModel::connectToHost() {
     m_client->connectToHost();
 }
 
@@ -54,13 +47,12 @@ void InverterModel::disconnectFromHost()
 
 void InverterModel::onConnected()
 {
-    QString topic = "sbfspot_" + QString::number(m_config.serial) + "/live";
-    m_liveSub = m_client->subscribe(topic, 0);
-    topic = "sbfspot_" + QString::number(m_config.serial) + "/today/stats";
-    m_statsSub = m_client->subscribe(topic, 1);
+    m_liveTopic = "sbfspot_" + QString::number(m_config.serial) + "/live";
+    m_client->subscribe(m_liveTopic, 0);
+    m_statsTopic = "sbfspot_" + QString::number(m_config.serial) + "/today/stats";
+    m_client->subscribe(m_statsTopic, 1);
 
-    connect(m_liveSub, &QMqttSubscription::messageReceived, this, &InverterModel::onLiveDataReceived);
-    connect(m_statsSub, &QMqttSubscription::messageReceived, this, &InverterModel::onStatsDataReceived);
+    connect(m_client, &QMQTT::Client::received, this, &InverterModel::onMessageReceived);
 
     for (const auto& config : m_config.strings) {
         auto data = new StringData;
@@ -76,8 +68,8 @@ void InverterModel::onConnected()
 void InverterModel::onDisconnected()
 {
     qDebug() << "onDisconnected";
-    m_liveSub->unsubscribe();
-    m_statsSub->unsubscribe();
+    m_client->unsubscribe(m_liveTopic);
+    m_client->unsubscribe(m_statsTopic);
     m_updateTimer.stop();
 
     for (auto& data : m_stringLiveData) {
@@ -87,58 +79,49 @@ void InverterModel::onDisconnected()
     emit liveDataChanged();
 }
 
-void InverterModel::onStateChanged(QMqttClient::ClientState state)
-{
-    qDebug() << "onState:" << state;
-}
-
-void InverterModel::onErrorChanged(QMqttClient::ClientError error)
+void InverterModel::onErrorChanged(const QMQTT::ClientError error)
 {
     qDebug() << "onError:" << error;
 }
 
-void InverterModel::onLiveDataReceived(const QMqttMessage& message)
-{
-    auto topic = message.topic();
-    qDebug() << topic;
-
-    // Inverter live data
-    auto variant = MsgPack::unpack(message.payload()).toMap();
-    m_lastUpdate = variant.value(toIntString(InverterProperty::Timestamp)).toDateTime();
-    m_yieldTotal = variant.value(toIntString(InverterProperty::YieldTotal)).toDouble();
-    m_yieldToday = variant.value(toIntString(InverterProperty::YieldToday)).toDouble();
-    m_powerAcNow = variant.value(toIntString(InverterProperty::Power)).toDouble();
-
-    // String live data
-    auto strings = variant.value(toIntString(InverterProperty::Strings)).toList();
-    int i = 0;
-    int j = 0;
-    m_powerDcTotal = 0.0;
-    for (; (i < strings.size()) && (j < m_stringLiveData.size()); ++i, ++j) {
-        m_stringLiveData[i]->power = strings.value(i).toMap().value(toIntString(InverterProperty::StringPower)).toReal();
-        m_powerDcTotal += m_stringLiveData[i]->power;
-    }
-
-    emit liveDataChanged();
-}
-
-void InverterModel::onStatsDataReceived(const QMqttMessage& message)
+void InverterModel::onMessageReceived(const QMQTT::Message& message)
 {
     auto topic = message.topic();
     qDebug() << topic << ":" << message.payload().size();
 
-    // Inverter stats data
-    auto variant = MsgPack::unpack(message.payload()).toMap();
+    if (topic.endsWith("/live")) {
+        // Inverter live data
+        auto variant = MsgPack::unpack(message.payload()).toMap();
+        m_lastUpdate = variant.value(toIntString(InverterProperty::Timestamp)).toDateTime();
+        m_yieldTotal = variant.value(toIntString(InverterProperty::YieldTotal)).toDouble();
+        m_yieldToday = variant.value(toIntString(InverterProperty::YieldToday)).toDouble();
+        m_powerAcNow = variant.value(toIntString(InverterProperty::Power)).toDouble();
 
-    // String stats data
-    auto strings = variant.value(toIntString(InverterProperty::Strings)).toList();
-    int i = 0;
-    int j = 0;
-    for (; (i < strings.size()) && (j < m_stringLiveData.size()); ++i, ++j) {
-        m_stringLiveData[i]->powerPeakToday = strings.value(i).toMap().value(toIntString(InverterProperty::StringPowerMaxToday)).toReal();
+        // String live data
+        auto strings = variant.value(toIntString(InverterProperty::Strings)).toList();
+        int i = 0;
+        int j = 0;
+        m_powerDcTotal = 0.0;
+        for (; (i < strings.size()) && (j < m_stringLiveData.size()); ++i, ++j) {
+            m_stringLiveData[i]->power = strings.value(i).toMap().value(toIntString(InverterProperty::StringPower)).toReal();
+            m_powerDcTotal += m_stringLiveData[i]->power;
+        }
+
+        emit liveDataChanged();
+    } else if (topic.endsWith("/stats")) {
+        // Inverter stats data
+        auto variant = MsgPack::unpack(message.payload()).toMap();
+
+        // String stats data
+        auto strings = variant.value(toIntString(InverterProperty::Strings)).toList();
+        int i = 0;
+        int j = 0;
+        for (; (i < strings.size()) && (j < m_stringLiveData.size()); ++i, ++j) {
+            m_stringLiveData[i]->powerPeakToday = strings.value(i).toMap().value(toIntString(InverterProperty::StringPowerMaxToday)).toReal();
+        }
+
+        emit liveDataChanged();
     }
-
-    emit liveDataChanged();
 }
 
 QString InverterModel::lastUpdate()

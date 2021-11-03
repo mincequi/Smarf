@@ -3,26 +3,26 @@
 #include <QDebug>
 #include <QTimer>
 #include <msgpack.h>
+#include <qmqtt.h>
 
 #include "Persistence.h"
 #include "InverterModel.h"
 #include "Types.h"
 
-QmlMqttClient::QmlMqttClient(QObject* parent)
-    : QMqttClient(parent)
-{
-    connect(this, &QMqttClient::connected, this, &QmlMqttClient::onConnected);
+QmlMqttClient::QmlMqttClient(QObject* parent) :
+    m_client(new QMQTT::Client()) {
+    connect(m_client, &QMQTT::Client::connected, this, &QmlMqttClient::onConnected);
+    connect(m_client, &QMQTT::Client::received, this, &QmlMqttClient::onReceived);
     //connect(this, &QMqttClient::disconnected, this, &QmlMqttClient::onDisconnected);
     //connect(this, &QMqttClient::stateChanged, this, &QmlMqttClient::onStateChanged);
 }
 
-QmlMqttClient::~QmlMqttClient()
-{
+QmlMqttClient::~QmlMqttClient() {
+    m_client->deleteLater();
 }
 
-void QmlMqttClient::start()
-{
-    if (state() != Disconnected) {
+void QmlMqttClient::start() {
+    if (m_client->isConnectedToHost()) {
         return;
     }
 
@@ -33,11 +33,11 @@ void QmlMqttClient::start()
     });
 }
 
-void QmlMqttClient::stop()
-{
-    disconnectFromHost();
+void QmlMqttClient::stop() {
+    m_client->disconnectFromHost();
 }
 
+/*
 void QmlMqttClient::onStateChanged(QMqttClient::ClientState state)
 {
 //    switch (state) {
@@ -49,15 +49,14 @@ void QmlMqttClient::onStateChanged(QMqttClient::ClientState state)
 //        m_hostState = Invalid;
 //    }
 }
+*/
 
-void QmlMqttClient::onConnected()
-{
-    m_config.setCurrentHost(hostname());
+void QmlMqttClient::onConnected() {
+    m_config.setCurrentHost(m_client->hostName());
     validateInverter(m_config.currentInverter());
 }
 
-void QmlMqttClient::onDisconnected()
-{
+void QmlMqttClient::onDisconnected() {
     m_plantState = Unknown;
     m_inverterState = Unknown;
 
@@ -72,11 +71,30 @@ void QmlMqttClient::onDisconnected()
     emit invertersChanged();
 }
 
-void QmlMqttClient::validateHost(const QString& hostname)
-{
-    disconnectFromHost();
-    setHostname(hostname);
-    connectToHost();
+void QmlMqttClient::onReceived(const QMQTT::Message& message) {
+    if (message.topic().endsWith("/config")) {
+        m_client->unsubscribe(message.topic());
+        m_inverterState = Valid;
+        emit inverterStateChanged();
+
+        m_inverterConfig.manufacturer = "SMA";
+        m_inverterConfig.name = MsgPack::unpack(message.payload()).toMap().value(toIntString(InverterProperty::Name)).toString();
+        m_inverterConfig.mqttHost = m_client->hostName();
+        m_inverterConfig.mqttPort = m_client->port();
+        m_inverterConfig.strings = StringConfig::fromMsgPack(MsgPack::unpack(message.payload()).toMap().value(toIntString(InverterProperty::Strings)));
+
+        if (m_autoConnect) {
+            //disconnectFromHost();
+            m_autoConnect = false;
+            subscribeToInverter();
+        }
+    }
+}
+
+void QmlMqttClient::validateHost(const QString& hostname) {
+    m_client->disconnectFromHost();
+    m_client->setHostName(hostname);
+    m_client->connectToHost();
 }
 
 /*
@@ -111,7 +129,7 @@ void QmlMqttClient::validatePlant(const QString& plantname)
 void QmlMqttClient::validateInverter(const QString& inverterSerial)
 {
     // Only 10 digits serials are valid and we can only validate if we are connected
-    if (inverterSerial.size() != 10 || state() != ClientState::Connected) {
+    if (inverterSerial.size() != 10 || !m_client->isConnectedToHost()) {
         m_inverterState = Unknown;
         emit inverterStateChanged();
         return;
@@ -120,28 +138,11 @@ void QmlMqttClient::validateInverter(const QString& inverterSerial)
     m_inverterState = Checking;
     emit inverterStateChanged();
 
-    auto sub = subscribe("sbfspot_" + inverterSerial + "/config");
-    connect(sub, &QMqttSubscription::messageReceived, this, [=](const QMqttMessage& msg) {
-        sub->unsubscribe();
-        m_inverterState = Valid;
-        emit inverterStateChanged();
-
-        m_inverterConfig.manufacturer = "SMA";
-        m_inverterConfig.name = MsgPack::unpack(msg.payload()).toMap().value(toIntString(InverterProperty::Name)).toString();
-        m_inverterConfig.serial = inverterSerial.toUInt();
-        m_inverterConfig.mqttHost = hostname();
-        m_inverterConfig.mqttPort = port();
-        m_inverterConfig.strings = StringConfig::fromMsgPack(MsgPack::unpack(msg.payload()).toMap().value(toIntString(InverterProperty::Strings)));
-
-        if (m_autoConnect) {
-            //disconnectFromHost();
-            m_autoConnect = false;
-            subscribeToInverter();
-        }
-    });
+    m_inverterConfig.serial = inverterSerial.toUInt();
+    m_client->subscribe("sbfspot_" + inverterSerial + "/config");
 
     QTimer::singleShot(3500, this, [=]() {
-        sub->unsubscribe();
+        m_client->unsubscribe("sbfspot_" + inverterSerial + "/config");
         if (m_inverterState != Valid) {
             m_inverterState = Invalid;
             emit inverterStateChanged();
@@ -149,23 +150,20 @@ void QmlMqttClient::validateInverter(const QString& inverterSerial)
     });
 }
 
-void QmlMqttClient::subscribeToInverter()
-{
+void QmlMqttClient::subscribeToInverter() {
     if (m_inverterState != Valid) {
         return;
     }
 
-    disconnectFromHost();
+    m_client->disconnectFromHost();
     m_inverters.push_back(new InverterModel(m_inverterConfig));
     emit invertersChanged();
 }
 
-QString QmlMqttClient::currentInverter() const
-{
+QString QmlMqttClient::currentInverter() const {
     return m_config.currentInverter();
 }
 
-QList<QObject*> QmlMqttClient::inverters() const
-{
+QList<QObject*> QmlMqttClient::inverters() const {
     return m_inverters;
 }
