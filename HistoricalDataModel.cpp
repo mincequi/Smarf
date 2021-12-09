@@ -1,6 +1,6 @@
 #include "HistoricalDataModel.h"
 
-#include "Types.h"
+#include "CiotusTypes.h"
 
 #include <QDateTime>
 
@@ -26,11 +26,11 @@ QtCharts::QLineSeries* HistoricalDataModel::powerTotal()
 
 void HistoricalDataModel::onDataReceived(const QMap<QString, QVariant>& data)
 {
-    const auto tss = data.value(toIntString(InverterProperty::Timestamp)).toDateTime();
-    const auto interval = data.value(toIntString(InverterProperty::Interval)).toUInt();
-    const auto pDc1 = data.value(toIntString(InverterProperty::Strings)).toList().value(0).toMap().value(toIntString(InverterProperty::StringPower)).toList();
-    const auto pDc2 = data.value(toIntString(InverterProperty::Strings)).toList().value(1).toMap().value(toIntString(InverterProperty::StringPower)).toList();
-    const auto pAc = data.value(toIntString(InverterProperty::Power)).toList();
+    const auto tss = data.value(toIntString(cts::Property::Timestamp)).toDateTime();
+    const auto interval = data.value(toIntString(cts::Property::Interval)).toUInt();
+    const auto pDc1 = data.value(toIntString(cts::Property::Strings)).toList().value(0).toMap().value(toIntString(cts::Property::StringPower)).toList();
+    const auto pDc2 = data.value(toIntString(cts::Property::Strings)).toList().value(1).toMap().value(toIntString(cts::Property::StringPower)).toList();
+    const auto pAc = data.value(toIntString(cts::Property::Power)).toList();
 
     {
         QVector<QPointF> pointsDc1;

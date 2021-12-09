@@ -1,4 +1,4 @@
-#include "Types.h"
+#include "CiotusTypes.h"
 
 std::vector<StringConfig> StringConfig::fromMsgPack(const QVariant& variant)
 {
@@ -7,11 +7,11 @@ std::vector<StringConfig> StringConfig::fromMsgPack(const QVariant& variant)
     configs.reserve(strings.size());
     for (const auto& string : strings) {
         StringConfig config;
-        config.name = string.toMap().value(toIntString(InverterProperty::StringName)).toString();
+        config.name = string.toMap().value(toIntString(cts::Property::StringName)).toString();
         //config.inverterSerial =
         //config.azimuth = 180.0f;
         //config.elevation = 30.0f;
-        config.powerPeak = string.toMap().value(toIntString(InverterProperty::StringPowerMax)).toFloat();
+        config.powerPeak = string.toMap().value(toIntString(cts::Property::StringPowerMax)).toFloat();
 
         configs.push_back(config);
     }
@@ -24,7 +24,7 @@ bool InverterConfig::isValid() const
     return serial != 0;
 }
 
-QString toIntString(InverterProperty prop) {
+QString toIntString(cts::Property prop) {
     return QString::number(static_cast<int>(prop));
 }
 

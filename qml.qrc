@@ -17,5 +17,10 @@
         <file>icons/cog-outline.svg</file>
         <file>GaugePointer.qml</file>
         <file>DataCard.qml</file>
+        <file>LivePage.qml</file>
+        <file>LiveNode.qml</file>
+        <file>icons/solar-power.svg</file>
+        <file>icons/home.svg</file>
+        <file>icons/transmission-tower.svg</file>
     </qresource>
 </RCC>

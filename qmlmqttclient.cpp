@@ -7,7 +7,7 @@
 
 #include "Persistence.h"
 #include "InverterModel.h"
-#include "Types.h"
+#include "CiotusTypes.h"
 
 QmlMqttClient::QmlMqttClient(QObject* parent) :
     m_client(new QMQTT::Client()) {
@@ -78,10 +78,10 @@ void QmlMqttClient::onReceived(const QMQTT::Message& message) {
         emit inverterStateChanged();
 
         m_inverterConfig.manufacturer = "SMA";
-        m_inverterConfig.name = MsgPack::unpack(message.payload()).toMap().value(toIntString(InverterProperty::Name)).toString();
+        m_inverterConfig.name = MsgPack::unpack(message.payload()).toMap().value(toIntString(cts::Property::Name)).toString();
         m_inverterConfig.mqttHost = m_client->hostName();
         m_inverterConfig.mqttPort = m_client->port();
-        m_inverterConfig.strings = StringConfig::fromMsgPack(MsgPack::unpack(message.payload()).toMap().value(toIntString(InverterProperty::Strings)));
+        m_inverterConfig.strings = StringConfig::fromMsgPack(MsgPack::unpack(message.payload()).toMap().value(toIntString(cts::Property::Strings)));
 
         if (m_autoConnect) {
             //disconnectFromHost();

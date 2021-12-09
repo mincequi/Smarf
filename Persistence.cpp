@@ -3,7 +3,7 @@
 #include <QDate>
 #include <QStringList>
 
-#include "Types.h"
+#include "CiotusTypes.h"
 
 Persistence::Persistence(QObject *parent) : QObject(parent),
     m_settings("mincequi", "Smarf")
@@ -124,7 +124,7 @@ void Persistence::setInverterDayData(const QString& inverter, const InverterDayD
     m_settings.beginGroup("inverters");
     m_settings.beginGroup(inverter);
     m_settings.beginGroup("dayData");
-    QString day = QString::number(data.value(toIntString(InverterProperty::Timestamp)).toDate().toJulianDay());
+    QString day = QString::number(data.value(toIntString(cts::Property::Timestamp)).toDate().toJulianDay());
     m_settings.setValue(day, data);
     m_settings.endGroup();
     m_settings.endGroup();

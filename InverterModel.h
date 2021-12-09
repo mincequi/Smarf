@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Types.h"
+#include "CiotusTypes.h"
 
 #include <QDateTime>
 #include <QTimer>

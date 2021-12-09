@@ -2,13 +2,16 @@ import QtQuick 2.15
 import QtQuick.Window 2.2
 import QtQuick.Controls 2.12
 import QtQuick.Controls.Material 2.12
-import QtQuick.Layouts 1.1
+import QtQuick.Layouts 1.3
 import QtQuick.Shapes 1.15
 import MqttClient 1.0
+
+import Smarf.LiveModel 1.0
 import Smarf.ThemeModel 1.0
 
 ApplicationWindow {
     visible: true
+    // iPhone 6, 7, 8, SE2
     width: 375
     height: 667
     //width: 768
@@ -21,7 +24,6 @@ ApplicationWindow {
     Material.background: "#121212"
 
     property var inverterModel: 0
-    property var portNumber: 1883   // workaround to assign port to MqttClient
 
     property int appState: Qt.application.state
 
@@ -50,7 +52,45 @@ ApplicationWindow {
 
     MqttClient {
         id: client
-        port: portNumber
+    }
+
+    header: ToolBar {
+
+        background: Rectangle {
+            implicitHeight: 56
+            color: "#2e2300"
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            ToolButton {
+                text: qsTr("‹")
+                onClicked: stack.pop()
+            }
+            ColumnLayout {
+                Label {
+                    text: "Smarf"
+                    elide: Label.ElideLeft
+                    anchors.bottom: lastSeen.top
+                    Layout.fillWidth: true
+                }
+                Label {
+                    id: lastSeen
+                    text: LiveModel.lastUpdate
+                    color: "gray"
+                    font.pointSize: 12
+                    font.weight: Font.Thin
+                    anchors.bottom: parent.bottom
+                    //verticalAlignment: "AlignBottom"
+                    elide: Label.ElideLeft
+                    Layout.fillWidth: true
+                }
+            }
+            ToolButton {
+                text: qsTr("⋮")
+                onClicked: menu.open()
+            }
+        }
     }
 
     footer: TabBar {
@@ -58,6 +98,7 @@ ApplicationWindow {
         width: parent.width // anchors.fill: parent
         height: 56
         position: TabBar.Footer
+        currentIndex: 0
         TabButton {
             height: 56
             anchors.top: parent.top
@@ -91,31 +132,11 @@ ApplicationWindow {
         }
     }
 
-    ColumnLayout {
-        x: (parent.width-344)/2
-        y: 16
-        z: 0
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        spacing: 16
-
-        Repeater {
-            model: client.inverters
-
-            InverterCard {
-                //anchors.horizontalCenter: parent.horizontalCenter
-                inverter: modelData
-            }
-        } // Repeater
-
-        DataCard {
+    StackLayout {
+        width: parent.width
+        currentIndex: bar.currentIndex
+        LivePage {
+            id: homeTab
         }
-    }
-
-    AddPlant {
-        id: addPlant
-        client: client
-        z: 100
-        anchors.fill: parent
     }
 }

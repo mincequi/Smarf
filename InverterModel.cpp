@@ -1,6 +1,6 @@
 #include "InverterModel.h"
 
-#include "Types.h"
+#include "CiotusTypes.h"
 
 #include <QDateTime>
 
@@ -92,18 +92,18 @@ void InverterModel::onMessageReceived(const QMQTT::Message& message)
     if (topic.endsWith("/live")) {
         // Inverter live data
         auto variant = MsgPack::unpack(message.payload()).toMap();
-        m_lastUpdate = variant.value(toIntString(InverterProperty::Timestamp)).toDateTime();
-        m_yieldTotal = variant.value(toIntString(InverterProperty::YieldTotal)).toDouble();
-        m_yieldToday = variant.value(toIntString(InverterProperty::YieldToday)).toDouble();
-        m_powerAcNow = variant.value(toIntString(InverterProperty::Power)).toDouble();
+        m_lastUpdate = variant.value(toIntString(cts::Property::Timestamp)).toDateTime();
+        m_yieldTotal = variant.value(toIntString(cts::Property::YieldTotal)).toDouble();
+        m_yieldToday = variant.value(toIntString(cts::Property::YieldToday)).toDouble();
+        m_powerAcNow = variant.value(toIntString(cts::Property::Power)).toDouble();
 
         // String live data
-        auto strings = variant.value(toIntString(InverterProperty::Strings)).toList();
+        auto strings = variant.value(toIntString(cts::Property::Strings)).toList();
         int i = 0;
         int j = 0;
         m_powerDcTotal = 0.0;
         for (; (i < strings.size()) && (j < m_stringLiveData.size()); ++i, ++j) {
-            m_stringLiveData[i]->power = strings.value(i).toMap().value(toIntString(InverterProperty::StringPower)).toReal();
+            m_stringLiveData[i]->power = strings.value(i).toMap().value(toIntString(cts::Property::StringPower)).toReal();
             m_powerDcTotal += m_stringLiveData[i]->power;
         }
 
@@ -113,11 +113,11 @@ void InverterModel::onMessageReceived(const QMQTT::Message& message)
         auto variant = MsgPack::unpack(message.payload()).toMap();
 
         // String stats data
-        auto strings = variant.value(toIntString(InverterProperty::Strings)).toList();
+        auto strings = variant.value(toIntString(cts::Property::Strings)).toList();
         int i = 0;
         int j = 0;
         for (; (i < strings.size()) && (j < m_stringLiveData.size()); ++i, ++j) {
-            m_stringLiveData[i]->powerPeakToday = strings.value(i).toMap().value(toIntString(InverterProperty::StringPowerMaxToday)).toReal();
+            m_stringLiveData[i]->powerPeakToday = strings.value(i).toMap().value(toIntString(cts::Property::StringPowerMaxToday)).toReal();
         }
 
         emit liveDataChanged();

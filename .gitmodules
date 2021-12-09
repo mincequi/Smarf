@@ -4,3 +4,6 @@
 [submodule "thirdparty/qmqtt"]
 	path = thirdparty/qmqtt
 	url = https://github.com/emqx/qmqtt.git
+[submodule "thirdparty/CayenneLPP"]
+	path = thirdparty/CayenneLPP
+	url = https://github.com/mincequi/CayenneLPP.git

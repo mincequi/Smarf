@@ -2,18 +2,28 @@
 
 #include <QVariant>
 
-enum class InverterProperty : uint8_t
-{
+namespace cts {
+
+enum class DeviceClass : uint8_t {
+    Unknown = 0,
+    SolarInverter = 1,
+    EnergyMeter = 2,
+};
+
+enum class Property : uint8_t {
     // Static properties
-    Version = 0,    // Protocol version
-    Name = 1,
-    StartOfProduction = 2,  // Timestamp when this inverter got installed
-    Latitude = 3,
-    Longitude = 4,
-    PowerMax = 5,   // Nominal inverter power
+    Version = 0,        // uint: Protocol version
+
+    DeviceClass = 1,    // uint
+    DeviceId = 2,       // uint64: Unique id (e.g. serial).
+    Timestamp = 3,      // Timestamp for this data set
+    Name = 4,           // str[31]: human readable name
+    Coordinates = 5,    // geo coordinates ext type
+
+    PowerMax = 7,   // Nominal inverter power
 
     // Dynamic properties
-    Timestamp = 8,      // Timestamp for this data set
+
     Interval = 13,      // Interval in 5 seconds steps
     YieldTotal = 9,     // Total yield in Wh
     YieldToday = 10,    // Today's yield in Wh
@@ -33,8 +43,9 @@ enum class InverterProperty : uint8_t
     StringPower = Power,   // Current power
     StringPowerMaxToday = PowerMaxToday, // Today's peak
 
-    PropertyMax = 24
+    PropertyMax = 128
 };
+} // namespace cts
 
 struct StringConfig
 {
@@ -45,7 +56,6 @@ struct StringConfig
 
     static std::vector<StringConfig> fromMsgPack(const QVariant& byteArray);
 };
-
 
 struct InverterConfig
 {
@@ -78,4 +88,4 @@ public:
     float powerPeakToday = 0.0f;
 };
 
-QString toIntString(InverterProperty prop);
+QString toIntString(cts::Property prop);

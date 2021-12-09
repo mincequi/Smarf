@@ -1,25 +1,43 @@
 TEMPLATE = app
 
 QT += charts qml quick quickcontrols2 svg widgets
-CONFIG += c++11
+CONFIG += c++17
 
 SOURCES += main.cpp \
+    CiotusMessage.cpp \
+    CiotusTypes.cpp \
     HistoricalDataModel.cpp \
     InverterModel.cpp \
+    LiveModel.cpp \
     Persistence.cpp \
     ThemeModel.cpp \
-    Types.cpp \
-    qmlmqttclient.cpp
+    qmlmqttclient.cpp \
+    thirdparty/CayenneLPP/src/CayenneLPP.cpp \
+    thirdparty/CayenneLPP/src/CayenneLPPByteBuffer.cpp \
+    thirdparty/CayenneLPP/src/CayenneLPPMessage.cpp \
+    thirdparty/CayenneLPP/src/CayenneLPPPolyline.cpp \
+    thirdparty/CayenneLPP/src/CayenneLPPPowerMeasurement.cpp \
+    thirdparty/CayenneLPP/src/SFloat16.cpp
 
 HEADERS += \
+    CiotusMessage.h \
+    CiotusTypes.h \
     HistoricalDataModel.h \
     InverterModel.h \
+    LiveModel.h \
+    LiveModelPrivate.h \
     Persistence.h \
     ThemeModel.h \
-    Types.h \
-    qmlmqttclient.h
+    qmlmqttclient.h \
+    thirdparty/CayenneLPP/src/CayenneLPP.h \
+    thirdparty/CayenneLPP/src/CayenneLPPByteBuffer.h \
+    thirdparty/CayenneLPP/src/CayenneLPPMessage.h \
+    thirdparty/CayenneLPP/src/CayenneLPPPowerMeasurement.h \
+    thirdparty/CayenneLPP/src/SFloat16.h
 
 RESOURCES += qml.qrc
+
+INCLUDEPATH += thirdparty/CayenneLPP/src
 
 include(thirdparty/qmqtt/qmqtt.pri)
 include(thirdparty/qmsgpack/qmsgpack.pri)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Persistence.h"
-#include "Types.h"
+#include "CiotusTypes.h"
 
 #include <QtCore/QMap>
 

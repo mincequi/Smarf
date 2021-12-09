@@ -152,14 +152,14 @@ Item {
         Text {
             Layout.alignment: Qt.AlignRight
             color: Material.color(Material.Blue, Material.Shade500)
-            text: inverter.stringLiveData[0].power < 10000 ? inverter.stringLiveData[0].power.toFixed(0) : (inverter.stringLiveData[0].power/1000.0).toFixed(1)
+            text: "10023" //inverter.stringLiveData[0].power < 10000 ? inverter.stringLiveData[0].power.toFixed(0) : (inverter.stringLiveData[0].power/1000.0).toFixed(1)
             font.bold: true
             font.pointSize: 20
         }
         Text {
             Layout.alignment: Qt.AlignRight
             color: Material.color(Material.Blue, Material.Shade500)
-            text: inverter.stringLiveData[0].power < 10000 ? "W" : "kW"
+            text: "W" //inverter.stringLiveData[0].power < 10000 ? "W" : "kW"
             font.pointSize: 16
         }
         Text {
